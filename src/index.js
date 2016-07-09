@@ -73,7 +73,7 @@ client.indices.delete({index:'items',body:{
                 index: 'items',
                 type: 'item',
                 body: _.flatten(_.map(newItems,function(item,i){
-                    return [{create:{id:time+'_'+i}},item];
+                    return [{create:{_id:time+'_'+i}},item];
                 }))
             })).bind({time:time,items:newItems.length}).then(function(){
                 console.log(this.items+' items created ('+this.time+')');
