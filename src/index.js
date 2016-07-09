@@ -24,7 +24,10 @@ var client = new elasticsearch.Client({
 
 client.indices.delete({index:'items',body:{
     // number_of_replicas: 0
-}}).then(function(){
+}}).catch(function(e) {
+    if (e.body.error.type != 'index_not_found_exception')
+        throw e;
+}).then(function(){
     return client.indices.create({index: 'items'}).catch(function(e) {
         if (e.body.error.type != 'index_already_exists_exception')
             throw e;
@@ -108,10 +111,4 @@ function generateItem(startTime){
             coordinates: path
         }
     };
-
-    // return Promise.join(client.create({
-    //     index: 'items',
-    //     type: 'item',
-    //     body: item
-    // })).return(item);
 }
