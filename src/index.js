@@ -100,7 +100,7 @@ function generateItem(startTime){
         if (p[0] > 180) p[0] -= 360;
         if (p[1] < -90) p[1] += 180;
         if (p[1] > 90) p[1] -= 180;
-        p.splice(p.length-1,0,0,startTime+pathResolution*j);
+        p.splice(p.length,0,0,startTime+pathResolution*j);
         path.push(p);
     }
 
