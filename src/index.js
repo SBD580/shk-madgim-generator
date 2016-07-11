@@ -91,7 +91,7 @@ function generateItem(startTime){
     var itemEndTime = startTime + Math.floor(itemMinTime + (itemMaxTime - itemMinTime) * Math.random());
     var pathLength = Math.floor((itemEndTime - startTime) / pathResolution);
     var speed = itemSpeedMin + (itemSpeedMax - itemSpeedMin) * Math.random();
-    var path = [[-90 + Math.random() * 180, -45 + Math.random() * 90]];
+    var path = [[-90 + Math.random() * 180, -45 + Math.random() * 90,0,startTime]];
     var angle = -180 + Math.random() * 360;
     for (var j = 0; j < pathLength; j++) {
         angle += (j + 1) % 20 == 0 ? -30 + Math.random() * 60 : 0;
