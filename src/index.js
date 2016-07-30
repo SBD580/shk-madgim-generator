@@ -8,9 +8,9 @@ var args = process.argv.slice(2);
 var SOURCES = ['RS1','RS2','RS3','RS4','RS5','RS6'];
 
 var removeExistingIndices = args[0]==='true';
-var startTime = args[1]||(Date.now()-1*1000*60*60*24); // 1 day from now
-var endTime = args[2]||Date.now();
-var itemsConcurrent = 20;
+var itemsConcurrent = args[1];
+var startTime = args[2]||(Date.now()-1*1000*60*60*24); // 1 day from now
+var endTime = args[3]||Date.now();
 var itemMinTime = 1*60; // 1 min
 var itemMaxTime = 2*60*60; // 2 hours
 var pathResolution = 10; // 10 seconds
