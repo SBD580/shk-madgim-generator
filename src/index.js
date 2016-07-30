@@ -7,7 +7,7 @@ var args = process.argv.slice(2);
 
 var SOURCES = ['RS1','RS2','RS3','RS4','RS5','RS6'];
 
-var removeExistingIndices = args[1]==='true';
+var removeExistingIndices = args[0]==='true';
 var startTime = Date.now()-1*1000*60*60*24; // 1 day from now
 var endTime = Date.now();
 var itemsConcurrent = 20;
