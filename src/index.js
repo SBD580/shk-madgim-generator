@@ -3,10 +3,14 @@ var _ = require('lodash');
 var random = require('geojson-random');
 var turf = require('turf');
 var Promise = require('bluebird');
+var args = process.argv.slice(2);
 
+var SOURCES = ['RS1','RS2','RS3','RS4','RS5','RS6'];
+
+var removeExistingIndices = args[1]==='true';
 var startTime = Date.now()-1*1000*60*60*24; // 1 day from now
 var endTime = Date.now();
-var itemsConcurrent = 10;
+var itemsConcurrent = 20;
 var itemMinTime = 1*60; // 1 min
 var itemMaxTime = 2*60*60; // 2 hours
 var pathResolution = 10; // 10 seconds
@@ -22,12 +26,12 @@ var client = new elasticsearch.Client({
     //log: 'trace'
 });
 
-client.indices.delete({index:'items',body:{
+(removeExistingIndices?client.indices.delete({index:'items',body:{
     // number_of_replicas: 0
 }}).catch(function(e) {
     if (e.body.error.type != 'index_not_found_exception')
         throw e;
-}).then(function(){
+}):Promise.resolve(null)).then(function(){
     return client.indices.create({index: 'items'}).catch(function(e) {
         if (e.body.error.type != 'index_already_exists_exception')
             throw e;
@@ -37,15 +41,24 @@ client.indices.delete({index:'items',body:{
         index: 'items',
         type: 'item',
         body: {
-            properties: {
+            properties: {   
+                indexed: {
+                    type: 'date',
+                    format: 'epoch_second'
+                },
                 startTime: {
-                    type: 'long'
+                    type: 'date',
+                    format: 'epoch_second'
                 },
                 endTime: {
-                    type: 'long'
+                    type: 'date',
+                    format: 'epoch_second'
                 },
                 path: {
                     type: 'geo_shape'
+                },
+                src: {
+                    type: 'string'
                 }
             }
         }
@@ -59,21 +72,22 @@ client.indices.delete({index:'items',body:{
             return item.endTime < time;
         });
 
-        // generate (and store) new items
+        // generate new items
         var newItems = [];
         var newItemsCount = (itemsConcurrent - items.length);
         for (var i = 0; i < newItemsCount; i++) {
-            var item = generateItem(time);
+            var item = randomItem(time);
             items.push(item);
             newItems.push(item);
         }
 
+        // store new items
         if(newItems.length){
             promises[time] = Promise.join(client.bulk({
                 index: 'items',
                 type: 'item',
                 body: _.flatten(_.map(newItems,function(item,i){
-                    return [{create:{_id:time+'_'+i}},item];
+                    return [{create:{}},_.assign({indexed:parseInt(Date.now()/1000)},item)];
                 }))
             })).bind({time:time,items:newItems.length}).then(function(){
                 console.log(this.items+' items created ('+this.time+')');
@@ -87,7 +101,7 @@ client.indices.delete({index:'items',body:{
     console.log('DONE');
 },console.error);
 
-function generateItem(startTime){
+function randomItem(startTime){
     var itemEndTime = startTime + Math.floor(itemMinTime + (itemMaxTime - itemMinTime) * Math.random());
     var pathLength = Math.floor((itemEndTime - startTime) / pathResolution);
     var speed = itemSpeedMin + (itemSpeedMax - itemSpeedMin) * Math.random();
@@ -107,6 +121,7 @@ function generateItem(startTime){
     return {
         startTime: startTime,
         endTime: itemEndTime,
+        src: Math.random()<=0.3?null:_.sample(SOURCES),
         path: {
             type: 'linestring',
             coordinates: path
