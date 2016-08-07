@@ -10,6 +10,8 @@
   "license": "UNLICENSED",
   "dependencies": {
     "bluebird": "^3.4.1",
+    "command-line-args": "^3.0.1",
+    "command-line-usage": "^3.0.3",
     "elasticsearch": "^11.0.1",
     "geojson-random": "^0.2.2",
     "lodash": "^4.13.1",

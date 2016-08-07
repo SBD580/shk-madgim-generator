@@ -1,3 +1,5 @@
+var commandLineArgs = require('command-line-args');
+var usage = require('command-line-usage');
 var elasticsearch = require('elasticsearch');
 var _ = require('lodash');
 var random = require('geojson-random');
@@ -7,21 +9,41 @@ var args = process.argv.slice(2);
 
 var SOURCES = ['RS1','RS2','RS3','RS4','RS5','RS6'];
 
-var removeExistingIndices = args[0]==='true';
-var itemsConcurrent = args[1];
-var startTime = args[2]||(Date.now()-1*1000*60*60*24); // 1 day from now
-var endTime = args[3]||Date.now();
-var itemMinTime = 1*60; // 1 min
-var itemMaxTime = 2*60*60; // 2 hours
-var pathResolution = 10; // 10 seconds
-var itemSpeedMin = 400; // m/s
-var itemSpeedMax = 700; // m/s
+var optionsDefinitions = [
+    {name: 'start', type: Number, defaultValue: Date.now()-1*1000*60*60*24, description: 'The starting time in milliseconds (default to 24 hours ago)'},
+    {name: 'end', type: Number, defaultValue: Date.now(), description: 'The ending time in milliseconds (default to now)'},
+    {name: 'items', type: Number, defaultValue: 10, description: 'Number of concurrent items (default to 10)'},
+    {name: 'itemMinTime', type: Number, defaultValue: 60, description: 'Minimum number of seconds for an item to exists (default to 1 minute)'},
+    {name: 'itemMaxTime', type: Number, defaultValue:2*60*60, description: 'Maximum number of seconds for an item to exists (default to 2 hours)'},
+    {name: 'itemMinSpeed', type: Number, defaultValue: 400, description: 'Minimum speed for an item in m/s (default to 400)'},
+    {name: 'itemMaxSpeed', type: Number, defaultValue: 700, description: 'Maximum speed for an item in m/s (default to 700)'},
+    {name: 'res', type: Number, defaultValue: 10, description: 'Path resolution in seconds (default to 10)'},
+    {name: 'clean', type: Boolean, defaultValue: false, description: 'remove currently existing indices'},
+    {name: 'elastic', type: String, defaultValue: 'localhost:9200', description: 'host:port for the elasticsearch instance'},
+    {name: 'help', type: Boolean, defaultValue: false, description: 'print usage message and exit'}
+];
+var options = commandLineArgs(optionsDefinitions);
+
+if(options.help){
+    console.error(usage({header:'Options',optionList:optionsDefinitions}));
+    process.exit(1);
+}
+
+var removeExistingIndices = options.clean;
+var itemsConcurrent = options.items;
+var startTime = options.start; // 1 day from now
+var endTime = options.end;
+var itemMinTime = options.itemMinTime; // 1 min
+var itemMaxTime = options.itemMaxTime; // 2 hours
+var pathResolution = options.res; // 10 seconds
+var itemSpeedMin = options.itemMinSpeed; // m/s
+var itemSpeedMax = options.itemMaxSpeed; // m/s
 
 startTime = Math.floor(startTime/1000);
 endTime = Math.floor(endTime/1000);
 
 var client = new elasticsearch.Client({
-    host: 'localhost:9200',
+    host: options.elastic,
     requestTimeout: 200000
     //log: 'trace'
 });
@@ -36,7 +58,7 @@ var client = new elasticsearch.Client({
         if (e.body.error.type != 'index_already_exists_exception')
             throw e;
     });
-},console.error).then(function() {
+}).then(function() {
    return client.indices.putMapping({
         index: 'items',
         type: 'item',
@@ -59,11 +81,14 @@ var client = new elasticsearch.Client({
                 },
                 src: {
                     type: 'string'
+                },
+                type: {
+                    type:'string'
                 }
             }
         }
     });
-},console.error).then(function() {
+}).then(function() {
     var promises = {};
     var items = [];
     for (var time = startTime; time <= endTime; time++) {
@@ -97,9 +122,9 @@ var client = new elasticsearch.Client({
     }
 
     return Promise.all(_.values(promises));
-},console.error).then(function(){
+}).then(function(){
     console.log('DONE');
-},console.error);
+}).catch(console.error);
 
 function randomItem(startTime){
     var itemEndTime = startTime + Math.floor(itemMinTime + (itemMaxTime - itemMinTime) * Math.random());
@@ -118,10 +143,12 @@ function randomItem(startTime){
         path.push(p);
     }
 
+    var type = Math.random()<=0.3?'T':'R';
     return {
         startTime: startTime,
         endTime: itemEndTime,
-        src: Math.random()<=0.3?null:_.sample(SOURCES),
+        type: type,
+        src: _.sampleSize(SOURCES,type=='T'?_.random(1,4):1),
         path: {
             type: 'linestring',
             coordinates: path
