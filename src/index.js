@@ -80,10 +80,12 @@ var client = new elasticsearch.Client({
                     type: 'geo_shape'
                 },
                 src: {
-                    type: 'string'
+                    type: 'string',
+                    index: 'not_analyzed'
                 },
                 type: {
-                    type:'string'
+                    type:'string',
+                    index: 'not_analyzed'
                 }
             }
         }
