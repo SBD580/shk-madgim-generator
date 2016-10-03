@@ -63,6 +63,9 @@ var client = new elasticsearch.Client({
         index: 'items',
         type: 'item',
         body: {
+            _all: {
+                enabled: false
+            },
             properties: {   
                 indexed: {
                     type: 'date',
